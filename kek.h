@@ -7,8 +7,20 @@ void yyerror(const char *s);
 struct ast 
 {
     const char* nodetype;
-    struct ast *l;
-    struct ast *r;
+
+    union {
+        struct {
+            struct ast *l;
+            struct ast *r;
+        } children;
+
+        struct {
+            struct listnode *current;
+            struct listnode *next;
+        } listnode;
+        
+        double value;
+    } u;
 };
 
 // number structs for number leaf nodes?
@@ -21,13 +33,14 @@ struct numnode
 struct listnode
 {
     const char* nodetype;
+    struct listnode *current;
     struct listnode *next;
 };
 
 // building the ast
 struct ast *newast(const char* nodetype, struct ast *l, struct ast *r);
 struct ast *newnum(double d);
-struct ast *newlist(struct ast* next);
+struct ast *newlist(struct ast *current, struct ast* next);
 
 // Evaluating the ast
 double eval(struct ast *);

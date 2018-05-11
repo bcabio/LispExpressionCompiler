@@ -16,8 +16,8 @@ void yyerror(const char *s);
 
 %union 
 {
-	struct ast *a;
-	double d;
+	struct ast *node;
+	double num;
 }
 
 %token ENDL
@@ -26,8 +26,8 @@ void yyerror(const char *s);
 %token LPAREN
 %token NUM
 
-%type <d> NUM
-%type <a> lisp list seq
+%type <num> NUM
+%type <node> lisp list seq
 
 %%
 
@@ -51,7 +51,7 @@ lisp:
 	| LPAREN '-' lisp lisp RPAREN { $$ = newast("-", $3, $4); }
 	| LPAREN '*' lisp lisp RPAREN { $$ = newast("*", $3, $4); }
 	| LPAREN '/' lisp lisp RPAREN { $$ = newast("/", $3, $4); }
-	| "car" LPAREN list RPAREN { $$ = newast("list", NULL, $3); }
+	| "car" LPAREN list RPAREN { $$ = newast("lisp", ((struct listnode *) $3)->current); }
 	;
 
 list:
@@ -59,8 +59,8 @@ list:
 	;
 
 seq:
-	lisp { $$ = newlist(NULL); }
-	| seq lisp
+	lisp { $$ = newlist($1, NULL); }
+	| seq lisp { $$ = newast($1, $2); }
 	;
 %%
 int main(int, char**) 
@@ -87,36 +87,39 @@ struct ast *newast(const char* nodetype, struct ast *l, struct ast *r)
 	}
 
 	a->nodetype = nodetype;
-	a->l = l;
-	a->r = r;
+	a->u.children.l = l;
+	a->u.children.r = r;
 	return a;
 }
 
 struct ast *newnum(double d)
 {
-	struct numnode *n = (struct numnode*) malloc(sizeof(struct numnode));
+	struct ast *n = malloc(sizeof(struct ast));
 
 	if(!n) {
 		yyerror("Ran out of space");
 		exit(1);
 	}
 	n->nodetype = "number";
-	n->number = d;
-	return (struct ast *) n;
+	n->u->value = d;
+	return n;
 }
 
 
-struct ast *newlist(struct ast* next) 
+struct ast *newlist(struct ast *current, struct ast* next) 
 {
-	struct listnode *n = (struct listnode*) malloc(sizeof(struct listnode));
+	struct ast *n = malloc(sizeof(struct ast));
+
 	if(!n) {
 		yyerror("Ran out of space");
 		exit(1);
 	}
 
 	n->nodetype = "list";
-	n->next = next;
-	return (struct ast *) n;
+	n->u-listnode->current = current;
+	n->u->listnode->next = next;
+
+	return n;
 }
 
 
@@ -126,16 +129,16 @@ double eval(struct ast *node)
 	const char* nt = node->nodetype;
 	
 	if(nt == "number") {
-		v = ((struct numnode *) node)->number; 
+		return ((struct numnode *) node)->number; 
 	} 
 	else if(nt == "+") {
-		v = eval(node->l) + eval(node->r); 
+		return eval(node->u->children->l) + eval(node->u->children->r); 
 	}
 	else if(nt == "-") {
-		v = eval(node->l) - eval(node->r); 
+		return eval(node->u->children->l) - eval(node->u->children-->r); 
 	}
 	else if(nt == "*") {
-		v = eval(node->l) * eval(node->r); 
+		return eval(node->u->children->l) * eval(node->u->children->r); 
 	}
 	else if(nt == "/") {
 		if (eval(node->r) == 0) {
@@ -143,12 +146,20 @@ double eval(struct ast *node)
 			exit(1);
 		}
 
-		v = eval(node->l) / eval(node->r);
+		return eval(node->u->children->l) / eval(node->u->children->r); 
 	} 
+	else if(nt == "lisp") {
+		// If only one subtree, it'll be left
+		return eval(node->l);
+	}
+	else if(nt == "car") {
+		// v = node->
+		return v;
+	}
 	else {
 		yyerror("Internal error: bad eval node");
+		exit(1);
 	}
-	return v;
 }
 
 
