@@ -4,6 +4,8 @@
 #include "kek.h"
 using namespace std;
 
+#define YYMAXDEPTH 50000
+
 // stuff from flex that bison needs to know about:
 extern "C" int yylex();
 extern "C" int yyparse();
@@ -26,6 +28,7 @@ void yyerror(const char *s);
 %token LPAREN
 %token NUM
 %token CAR
+%token CDR
 
 %type <d> NUM
 %type <a> lisp list	
@@ -55,7 +58,12 @@ lisp:
 
 list:
 	lisp { $$ = newlist(eval($1), NULL); }
-	| list lisp { $$ = newlist(eval($1), $2); }
+	| lisp list { $$ = newlist(eval($1), $2); }
+	| CDR LPAREN list RPAREN { 
+		$$ = newlist(
+				$3->u.listnode.next->u.listnode.value, // Get next node's value
+				$3->u.listnode.next->u.listnode.next); // Get next next node
+		}
 	;
 %%
 

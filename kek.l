@@ -17,6 +17,7 @@ using namespace std;
 "("				{ return LPAREN; }
 ")"				{ return RPAREN; }
 "car"           { return CAR; }
+"cdr"           { return CDR; }
 [ \t]			;
 [0-9]+			{ yylval.d = atoi(yytext); return NUM; }
 . ;
