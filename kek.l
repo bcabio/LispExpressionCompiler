@@ -16,8 +16,8 @@ using namespace std;
 \n				{ return ENDL; }
 "("				{ return LPAREN; }
 ")"				{ return RPAREN; }
+"car"           { return CAR; }
 [ \t]			;
-"car"           { return yytext[0]; }
 [0-9]+			{ yylval.d = atoi(yytext); return NUM; }
 . ;
 %%

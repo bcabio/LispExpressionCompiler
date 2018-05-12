@@ -25,12 +25,12 @@ void yyerror(const char *s);
 %token RPAREN
 %token LPAREN
 %token NUM
+%token CAR
 
 %type <d> NUM
-%type <a> lisp list seq
+%type <a> lisp list	
 
 %%
-
 kek:
 	lines
 	;
@@ -42,7 +42,6 @@ lines:
 
 line:
 	lisp { printf("Value %4.4g\n", eval($1)); }
-	| list
 	;
 
 lisp:
@@ -51,23 +50,18 @@ lisp:
 	| LPAREN '-' lisp lisp RPAREN { $$ = newast("-", $3, $4); }
 	| LPAREN '*' lisp lisp RPAREN { $$ = newast("*", $3, $4); }
 	| LPAREN '/' lisp lisp RPAREN { $$ = newast("/", $3, $4); }
-	| "car" LPAREN list RPAREN { $$ = newast("list", NULL, $3); }
+	| CAR LPAREN list RPAREN { $$ = newast("car", NULL, $3); printf("%f\n", eval($$)); }
 	;
 
 list:
-	seq
-	;
-
-seq:
-	lisp { $$ = newlist(NULL); }
-	| seq lisp
+	lisp { $$ = newlist(eval($1), NULL); }
+	| list lisp { $$ = newlist(eval($1), $2); }
 	;
 %%
+
 int main(int, char**) 
 {
-	printf("> ");
-	yyparse();
-	
+	yyparse();	
 }
 
 void yyerror(const char *s) 
@@ -87,36 +81,37 @@ struct ast *newast(const char* nodetype, struct ast *l, struct ast *r)
 	}
 
 	a->nodetype = nodetype;
-	a->l = l;
-	a->r = r;
+	a->u.children.l = l;
+	a->u.children.r = r;
 	return a;
 }
 
 struct ast *newnum(double d)
 {
-	struct numnode *n = (struct numnode*) malloc(sizeof(struct numnode));
+	struct ast *a = (struct ast*) malloc(sizeof(struct ast));
 
-	if(!n) {
+	if(!a) {
 		yyerror("Ran out of space");
 		exit(1);
 	}
-	n->nodetype = "number";
-	n->number = d;
-	return (struct ast *) n;
+	a->nodetype = "number";
+	a->u.value = d;
+	return a;
 }
 
 
-struct ast *newlist(struct ast* next) 
+struct ast *newlist(double d, struct ast* next) 
 {
-	struct listnode *n = (struct listnode*) malloc(sizeof(struct listnode));
-	if(!n) {
+	struct ast *a = (struct ast*) malloc(sizeof(struct ast));
+	if(!a) {
 		yyerror("Ran out of space");
 		exit(1);
 	}
 
-	n->nodetype = "list";
-	n->next = next;
-	return (struct ast *) n;
+	a->nodetype = "list";
+	a->u.listnode.value = d;
+	a->u.listnode.next = next;
+	return a;
 }
 
 
@@ -126,29 +121,34 @@ double eval(struct ast *node)
 	const char* nt = node->nodetype;
 	
 	if(nt == "number") {
-		v = ((struct numnode *) node)->number; 
+		return node->u.value; 
 	} 
 	else if(nt == "+") {
-		v = eval(node->l) + eval(node->r); 
+		return eval(node->u.children.l) + eval(node->u.children.r); 
 	}
 	else if(nt == "-") {
-		v = eval(node->l) - eval(node->r); 
+		return eval(node->u.children.l) - eval(node->u.children.r); 
 	}
 	else if(nt == "*") {
-		v = eval(node->l) * eval(node->r); 
+		return eval(node->u.children.l) * eval(node->u.children.r); 
 	}
 	else if(nt == "/") {
-		if (eval(node->r) == 0) {
+		if (eval(node->u.children.r) == 0) {
 			yyerror("Cannot divide by zero");
 			exit(1);
 		}
 
-		v = eval(node->l) / eval(node->r);
+		return eval(node->u.children.l) / eval(node->u.children.r);
 	} 
+	else if(nt == "car") {
+		return node->u.children.r->u.listnode.value;
+	}
+	else if(nt == "list") {
+		return node->u.listnode.value;
+	}
 	else {
 		yyerror("Internal error: bad eval node");
 	}
-	return v;
 }
 
 
@@ -157,7 +157,7 @@ void treefree(struct ast *node)
 	const char* nt = node->nodetype;
 	
 	if(nt == "+" || nt == "-" || nt == "*" || nt == "/") {
-		treefree(node->r);
+		treefree(node->u.children.r);
 	}
 	else if (nt == "number") {
 		free(node);
