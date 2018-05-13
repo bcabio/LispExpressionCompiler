@@ -44,7 +44,7 @@ lines:
 	;
 
 line:
-	lisp { printf("Value %4.4g\n", eval($1)); }
+	lisp { printf("Value %4.4g\n\n", eval($1)); }
 	;
 
 lisp:
@@ -74,9 +74,8 @@ int main(int, char**)
 
 void yyerror(const char *s) 
 {
-	cout << "EEK, parse error on line " << s << endl;
+	cout << s << endl;
 	// might as well halt now:
-	exit(-1);
 }
 
 struct ast *newast(const char* nodetype, struct ast *l, struct ast *r) 
@@ -99,7 +98,7 @@ struct ast *newnum(double d)
 	struct ast *a = (struct ast*) malloc(sizeof(struct ast));
 
 	if(!a) {
-		yyerror("Ran out of space");
+		yyerror("Ran out of memory");
 		exit(1);
 	}
 	a->nodetype = "number";
@@ -112,7 +111,7 @@ struct ast *newlist(double d, struct ast* next)
 {
 	struct ast *a = (struct ast*) malloc(sizeof(struct ast));
 	if(!a) {
-		yyerror("Ran out of space");
+		yyerror("Ran out of memory");
 		exit(1);
 	}
 
@@ -143,7 +142,6 @@ double eval(struct ast *node)
 	else if(nt == "/") {
 		if (eval(node->u.children.r) == 0) {
 			yyerror("Cannot divide by zero");
-			exit(1);
 		}
 
 		return eval(node->u.children.l) / eval(node->u.children.r);
