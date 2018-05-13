@@ -53,7 +53,7 @@ lisp:
 	| LPAREN '-' lisp lisp RPAREN { $$ = newast("-", $3, $4); }
 	| LPAREN '*' lisp lisp RPAREN { $$ = newast("*", $3, $4); }
 	| LPAREN '/' lisp lisp RPAREN { $$ = newast("/", $3, $4); }
-	| CAR LPAREN list RPAREN { $$ = newast("car", NULL, $3); printf("%f\n", eval($$)); }
+	| LPAREN CAR LPAREN list RPAREN RPAREN { $$ = newast("car", NULL, $4); printf("%f\n", eval($$)); }
 	;
 
 list:

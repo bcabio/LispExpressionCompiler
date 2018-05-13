@@ -43,6 +43,7 @@ struct ast *newlist(double d, struct ast* next);
 
 struct ast *append(struct ast* current, struct ast* next);
 
+
 // Evaluating the ast
 double eval(struct ast *);
 
